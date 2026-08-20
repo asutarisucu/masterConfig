@@ -1,0 +1,18 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "org.asutarisucu.masterConfig.mixins",
+  "compatibilityLevel": "{{COMPATIBILITY_LEVEL}}",
+  "mixins": [
+  ],
+  "client": [
+    "HotbarManagerMixin",
+    "OptionsMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}
