@@ -434,6 +434,10 @@ NBT のバイナリ形式は 1.12 の TAG_Long_Array 追加以降変わってい
 結果として MCHF 層は Minecraft のクラスを一切参照せず、**素の JUnit でテストできる**。
 
 ```
+@Inject(RETURN of HotbarManager#<init>)
+    別スレッドで load() を先に済ませておく。get() の先頭でその完了を待つ
+    （バニラは Saved Hotbars タブを初めて開いたときに読むので、量が多いとそこでゲームが止まっていた）
+
 @Inject(HEAD of HotbarManager#load())
     <master>/hotbars.dat  →  <gamedir>/hotbar.nbt を生成（DataVersion 付き）
     その後バニラが普通に読み、必要なら自分の DataFixer で持ち上げる
@@ -540,7 +544,7 @@ Java 17+ でもアクセス可能。
 | Mixin | 対象 | 目的 | バージョン差分 |
 |---|---|---|---|
 | `OptionsMixin` | `net.minecraft.client.Options` | `optionsFile` 差し替え ／ 未知キー保全 ／ DataFixer 抑止 | **なし** |
-| `HotbarManagerMixin` | `net.minecraft.client.HotbarManager` | `load()` 前に `hotbar.nbt` を生成、`save()` 後に MCHF へ取り込み | コンストラクタとフィールドが `File` → `Path`（1.20.2 と 1.20.4 の間） |
+| `HotbarManagerMixin` | `net.minecraft.client.HotbarManager` | 起動直後に別スレッドで `load()`、`load()` 前に `hotbar.nbt` を生成、`save()` 後に MCHF へ取り込み | コンストラクタとフィールドが `File` → `Path`（1.20.2 と 1.20.4 の間） |
 
 ### `Options` — 1.18.2 から 26.2 まで完全に同一
 

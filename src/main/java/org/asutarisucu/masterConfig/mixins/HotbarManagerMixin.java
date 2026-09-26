@@ -24,10 +24,14 @@ import net.minecraft.SharedConstants;
 import net.minecraft.client.HotbarManager;
 import org.asutarisucu.masterConfig.HotbarSharing;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Shares the creative hotbars through the master root.
@@ -50,6 +54,59 @@ public abstract class HotbarManagerMixin
 		//#else
 		return SharedConstants.getCurrentVersion().getDataVersion().getVersion();
 		//#endif
+	}
+
+	@Shadow
+	private boolean loaded;
+
+	@Shadow
+	private void load()
+	{
+		throw new AssertionError();
+	}
+
+	/**
+	 * Vanilla reads hotbar.nbt the first time the Saved Hotbars tab is opened, and the DataFixer run on a
+	 * large file freezes the game for a while at that point. Reading it on a separate thread right after
+	 * startup moves that wait out of the game
+	 */
+	@Unique
+	private volatile CompletableFuture<Void> masterconfig$preload;
+
+	@Inject(method = "<init>", at = @At("RETURN"))
+	private void masterconfig$startPreload(CallbackInfo ci)
+	{
+		if (!HotbarSharing.enabled())
+		{
+			return;
+		}
+		CompletableFuture<Void> preload = new CompletableFuture<>();
+		this.masterconfig$preload = preload;
+		Thread thread = new Thread(() -> {
+			try
+			{
+				this.load();
+				this.loaded = true;
+			}
+			finally
+			{
+				preload.complete(null);
+			}
+		}, "MasterConfig hotbar preload");
+		thread.setDaemon(true);
+		thread.start();
+	}
+
+	/** get() is the only way into load() and is also what save() goes through, so waiting here covers both */
+	@Inject(method = "get", at = @At("HEAD"))
+	private void masterconfig$awaitPreload(int id, CallbackInfoReturnable<?> cir)
+	{
+		CompletableFuture<Void> preload = this.masterconfig$preload;
+		if (preload != null)
+		{
+			preload.join();
+			this.masterconfig$preload = null;
+		}
 	}
 
 	@Inject(method = "load", at = @At("HEAD"))

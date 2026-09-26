@@ -45,7 +45,7 @@ public final class HotbarSharing
 	{
 	}
 
-	private static boolean enabled()
+	public static boolean enabled()
 	{
 		return MasterConfigService.resolveTarget(Settings.TARGET_HOTBAR) != null;
 	}
